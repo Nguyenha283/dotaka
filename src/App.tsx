@@ -198,16 +198,25 @@ export default function App() {
         const statusRes = await fetch(`/api/task/${taskId}`);
         const statusData = await statusRes.json();
 
-        if (statusData.code !== 0) throw new Error(statusData.message || "Task failed");
+        console.log("Poll response:", statusData);
+
+        // KIE returns code 200 for success
+        if (statusData.code !== 200) throw new Error(statusData.msg || statusData.message || "Task failed");
 
         const task = statusData.data;
-        if (task.status === "succeeded") {
-          return task.output_urls[0];
-        } else if (task.status === "failed") {
-          throw new Error("AI xử lý thất bại");
+        const status = task?.status;
+
+        if (status === "succeeded" || status === "completed" || status === "success") {
+          // KIE may use output_urls, outputs, or resultUrls
+          const urls = task.output_urls || task.outputs || task.resultUrls || [];
+          const imageUrl = Array.isArray(urls) ? urls[0] : urls;
+          if (!imageUrl) throw new Error("No output URL in response");
+          return imageUrl;
+        } else if (status === "failed" || status === "error") {
+          throw new Error(task.error || "AI xử lý thất bại");
         }
 
-        // Wait 5 seconds before next poll
+        // Still processing — wait 5s and retry
         await new Promise(r => setTimeout(r, 5000));
         return poll();
       };
