@@ -5,8 +5,6 @@ import axios from "axios";
 import cors from "cors";
 import dotenv from "dotenv";
 
-import FormData from "form-data";
-
 dotenv.config();
 
 const app = express();
@@ -15,29 +13,33 @@ const PORT = process.env.PORT || 3000;
 app.use(cors());
 app.use(express.json({ limit: "50mb" }));
 
-// --- Helper to convert base64 to temporary URL ---
-async function uploadToTmp(base64Data: string): Promise<string> {
+// --- Helper to upload base64 image to KIE.AI file storage ---
+async function uploadToKie(base64Data: string, apiKey: string): Promise<string> {
   try {
-    const base64Content = base64Data.split(",")[1];
-    const buffer = Buffer.from(base64Content, "base64");
-    
-    const form = new FormData();
-    form.append("file", buffer, { filename: "image.png", contentType: "image/png" });
+    // KIE.AI accepts the full data URL (with or without prefix)
+    const response = await axios.post(
+      "https://kieai.redpandaai.co/api/file-base64-upload",
+      { base64Data, fileName: `image_${Date.now()}.png` },
+      {
+        headers: {
+          "Authorization": `Bearer ${apiKey}`,
+          "Content-Type": "application/json",
+        },
+        maxContentLength: Infinity,
+        maxBodyLength: Infinity,
+      }
+    );
 
-    const response = await axios.post("https://tmpfiles.org/api/v1/upload", form, {
-      headers: form.getHeaders(),
-      maxContentLength: Infinity,
-      maxBodyLength: Infinity
-    });
-
-    // tmpfiles.org returns a URL like https://tmpfiles.org/123/image.png
-    // Direct link is https://tmpfiles.org/dl/123/image.png
-    const directUrl = response.data.data.url.replace("https://tmpfiles.org/", "https://tmpfiles.org/dl/");
-    console.log("Uploaded image to:", directUrl);
-    return directUrl;
+    const fileUrl = response.data?.data?.fileUrl || response.data?.fileUrl || response.data?.data?.url;
+    if (!fileUrl) {
+      console.error("KIE upload unexpected response:", response.data);
+      throw new Error("KIE upload returned no URL");
+    }
+    console.log("Uploaded image to KIE storage:", fileUrl);
+    return fileUrl;
   } catch (error: any) {
-    console.error("Upload to tmpfiles.org failed:", error.response?.data || error.message);
-    throw new Error("Failed to upload image to temporary storage");
+    console.error("KIE.AI file upload failed:", error.response?.data || error.message);
+    throw new Error("Failed to upload image to KIE.AI storage");
   }
 }
 
@@ -64,9 +66,9 @@ app.post("/api/generate", async (req, res) => {
 
     console.log("Starting generation for task...");
 
-    // 2. Upload images to temporary storage to get URLs
-    const roomUrl = await uploadToTmp(roomImage);
-    const moldingUrls = await Promise.all(moldingImages.map((img: string) => uploadToTmp(img)));
+    // 2. Upload images to KIE.AI storage to get URLs
+    const roomUrl = await uploadToKie(roomImage, KIE_API_KEY);
+    const moldingUrls = await Promise.all(moldingImages.map((img: string) => uploadToKie(img, KIE_API_KEY)));
 
     // 3. Combine into input_urls
     const input_urls = [roomUrl, ...moldingUrls].filter(url => !!url);
