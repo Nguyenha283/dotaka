@@ -1,0 +1,5 @@
+{
+  "name": "AI Molding Visualizer",
+  "description": "Visualize interior moldings in your room using AI. Upload a room photo and a molding sample to see the result.",
+  "requestFramePermissions": []
+}
