@@ -153,7 +153,7 @@ app.get("/api/task/:taskId", async (req, res) => {
     const { taskId } = req.params;
 
     const kieRes = await axios.get("https://api.kie.ai/api/v1/jobs/recordInfo", {
-      params: { task_id: taskId },
+      params: { taskId },
       headers: {
         Authorization: `Bearer ${KIE_API_KEY}`,
         "Content-Type": "application/json",
