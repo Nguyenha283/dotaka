@@ -22,14 +22,18 @@ app.use(express.json({ limit: "50mb" }));
 
 // ─────────────────────────────────────────────
 // Helper: Upload base64 image → KIE.AI storage → returns public URL
-// Docs: https://docs.kie.ai/file-upload-api/quickstart
+// Docs: https://docs.kie.ai/file-upload-api/upload-file-base-64
+// Endpoint: POST https://kieai.redpandaai.co/api/file-base64-upload
+// Body: { base64Data, uploadPath, fileName }
+// Response: { success, code, data: { downloadUrl } }
 // ─────────────────────────────────────────────
 async function uploadImageToKie(base64Data: string): Promise<string> {
   const response = await axios.post(
-    "https://kieai.erweima.ai/api/v1/resource/upload-file-base64",
+    "https://kieai.redpandaai.co/api/file-base64-upload",
     {
-      base64: base64Data,          // full data-URL or plain base64
-      type: "image",
+      base64Data,                      // full data-URL: "data:image/png;base64,..."
+      uploadPath: "images/base64",
+      fileName: `img_${Date.now()}.png`,
     },
     {
       headers: {
@@ -42,19 +46,20 @@ async function uploadImageToKie(base64Data: string): Promise<string> {
     }
   );
 
-  // Expected: { code: 200, data: { url: "https://..." } }
-  if (response.data?.code !== 200) {
-    console.error("KIE upload failed:", JSON.stringify(response.data));
+  // Expected: { success: true, code: 200, data: { downloadUrl: "https://..." } }
+  if (!response.data?.success || response.data?.code !== 200) {
+    console.error("❌ KIE upload failed:", JSON.stringify(response.data));
     throw new Error(`KIE upload error: ${response.data?.msg || "unknown"}`);
   }
 
-  const url = response.data?.data?.url || response.data?.data?.fileUrl;
+  // downloadUrl is the publicly accessible URL
+  const url = response.data?.data?.downloadUrl || response.data?.data?.fileUrl;
   if (!url) {
-    console.error("KIE upload: no URL in response:", JSON.stringify(response.data));
+    console.error("❌ KIE upload no URL:", JSON.stringify(response.data));
     throw new Error("KIE upload returned no URL");
   }
 
-  console.log("✅ Uploaded to KIE:", url);
+  console.log("✅ Uploaded:", url);
   return url;
 }
 
