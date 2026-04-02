@@ -1,10 +1,10 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { 
-  Wand2, 
-  Maximize2, 
-  X, 
-  Download, 
-  RotateCcw, 
+import {
+  Wand2,
+  Maximize2,
+  X,
+  Download,
+  RotateCcw,
   Image as ImageIcon,
   Layout,
   Sparkles,
@@ -90,7 +90,7 @@ export default function App() {
   const [promptLibrary, setPromptLibrary] = useState<Prompt[]>(() => {
     const saved = localStorage.getItem('promptLibrary_v2');
     if (saved) return JSON.parse(saved);
-    
+
     return [
       {
         id: 'mock-prompt-1',
@@ -141,11 +141,11 @@ export default function App() {
     downloadImage(url, `molding-ai-${Date.now()}.png`);
     showToast("Đã tải ảnh xuống");
   };
-  
+
   // KIE.AI API Parameters
   const [kieModel, setKieModel] = useState<'flux-2/pro-image-to-image' | 'flux-2/flex-image-to-image'>('flux-2/pro-image-to-image');
   const [outputAspectRatio, setOutputAspectRatio] = useState('16:9');
-  const [resolution, setResolution] = useState<'1K' | '2K' | '4K'>('1K');
+  const [resolution, setResolution] = useState<'1K' | '2K'>('1K');
   const [nsfwChecker, setNsfwChecker] = useState(false);
 
   // --- Handlers ---
@@ -189,7 +189,7 @@ export default function App() {
       // 2. Poll for Status
       let attempts = 0;
       const maxAttempts = 60; // 5 minutes (5s interval)
-      
+
       const poll = async (): Promise<string> => {
         if (attempts >= maxAttempts) throw new Error("Quá thời gian chờ xử lý");
         attempts++;
@@ -203,16 +203,27 @@ export default function App() {
         if (statusData.code !== 200) throw new Error(statusData.msg || statusData.message || "Task failed");
 
         const task = statusData.data;
-        const status = task?.status;
+        const status = task?.state || task?.status;
 
         if (status === "succeeded" || status === "completed" || status === "success") {
-          // KIE may use output_urls, outputs, or resultUrls
-          const urls = task.output_urls || task.outputs || task.resultUrls || [];
+          // KIE often returns resultUrls inside a stringified resultJson
+          let urls: any = [];
+          if (task.resultJson) {
+            try {
+              const parsed = JSON.parse(task.resultJson);
+              urls = parsed.resultUrls || parsed.output_urls || parsed.outputs || [];
+            } catch (err) {
+              console.error("Failed to parse resultJson:", err);
+            }
+          } else {
+            urls = task.output_urls || task.outputs || task.resultUrls || [];
+          }
+
           const imageUrl = Array.isArray(urls) ? urls[0] : urls;
-          if (!imageUrl) throw new Error("No output URL in response");
+          if (!imageUrl) throw new Error("No output URL in response from server");
           return imageUrl;
         } else if (status === "failed" || status === "error") {
-          throw new Error(task.error || "AI xử lý thất bại");
+          throw new Error(task.failMsg || task.error || "AI xử lý thất bại");
         }
 
         // Still processing — wait 5s and retry
@@ -256,8 +267,8 @@ export default function App() {
           <div className="flex items-center gap-4">
             <div className={cn(
               "w-11 h-11 rounded-2xl flex items-center justify-center shadow-xl border transition-all duration-500",
-              theme === 'dark' 
-                ? "bg-white text-black border-white/20 shadow-white/5" 
+              theme === 'dark'
+                ? "bg-white text-black border-white/20 shadow-white/5"
                 : "bg-black text-white border-white/20 shadow-black/5"
             )}>
               <Sparkles className="w-6 h-6 drop-shadow-md" />
@@ -286,13 +297,13 @@ export default function App() {
 
           <div className="flex items-center gap-8">
             <nav className="hidden md:flex items-center gap-10">
-              <button 
+              <button
                 onClick={() => setIsGuideModalOpen(true)}
                 className="text-sm font-bold opacity-60 hover:opacity-100 transition-all hover:scale-105 active:scale-95"
               >
                 Hướng dẫn
               </button>
-              <button 
+              <button
                 onClick={() => setIsLibraryPanelOpen(true)}
                 className="text-sm font-bold opacity-60 hover:opacity-100 transition-all hover:scale-105 active:scale-95"
               >
@@ -303,7 +314,7 @@ export default function App() {
             <div className={cn("h-6 w-px transition-colors duration-500", theme === 'dark' ? "bg-white/10" : "bg-slate-200")}></div>
 
             <div className="flex items-center gap-3">
-              <button 
+              <button
                 onClick={toggleTheme}
                 className={cn(
                   "p-2.5 rounded-full transition-all active:scale-95",
@@ -319,7 +330,7 @@ export default function App() {
 
       <main className="max-w-[1600px] mx-auto px-6 py-10">
         <div className="grid grid-cols-1 lg:grid-cols-[400px_1fr] gap-12 items-start">
-          
+
           {/* Left Column: Controls */}
           <aside className="space-y-8">
             {/* Step 1 & 2: Image Uploaders */}
@@ -336,7 +347,7 @@ export default function App() {
                     </div>
                   )}
                 </div>
-                <ImageUploader 
+                <ImageUploader
                   label="Không gian cần phối cảnh"
                   description="Chọn ảnh không gian"
                   image={roomImage}
@@ -358,7 +369,7 @@ export default function App() {
                     </div>
                   )}
                 </div>
-                <MultiImageUploader 
+                <MultiImageUploader
                   label="Mẫu phào mong muốn"
                   description="Tải lên tối đa 5 ảnh góc cạnh"
                   images={moldingImages}
@@ -395,7 +406,7 @@ export default function App() {
                         onClick={() => setKieModel(m.value as any)}
                         className={cn(
                           "px-4 py-3 rounded-2xl text-xs font-bold transition-all border",
-                          kieModel === m.value 
+                          kieModel === m.value
                             ? (theme === 'dark' ? "bg-white text-black border-white" : "bg-black text-white border-black")
                             : (theme === 'dark' ? "bg-transparent border-white/10 hover:border-white/30" : "bg-transparent border-slate-100 hover:border-slate-300")
                         )}
@@ -411,7 +422,7 @@ export default function App() {
                     <label className="text-[10px] font-black opacity-40 uppercase tracking-widest ml-1 flex items-center gap-2">
                       <Maximize className="w-3 h-3" /> Độ phân giải
                     </label>
-                    <select 
+                    <select
                       value={resolution}
                       onChange={(e) => setResolution(e.target.value as any)}
                       className={cn(
@@ -428,7 +439,7 @@ export default function App() {
                     <label className="text-[10px] font-black opacity-40 uppercase tracking-widest ml-1 flex items-center gap-2">
                       <Eye className="w-3 h-3" /> Tỉ lệ
                     </label>
-                    <select 
+                    <select
                       value={outputAspectRatio}
                       onChange={(e) => setOutputAspectRatio(e.target.value)}
                       className={cn(
@@ -445,8 +456,8 @@ export default function App() {
 
                 <div className="space-y-4">
                   <label className="flex items-center gap-3 cursor-pointer">
-                    <input 
-                      type="checkbox" 
+                    <input
+                      type="checkbox"
                       checked={nsfwChecker}
                       onChange={(e) => setNsfwChecker(e.target.checked)}
                       className="w-5 h-5 rounded border-gray-300 text-black focus:ring-black"
@@ -466,7 +477,7 @@ export default function App() {
                   <StepIndicator step="Step 04" theme={theme} />
                   <h3 className="text-sm font-bold uppercase tracking-widest opacity-70">Hướng dẫn phối cảnh</h3>
                 </div>
-                <button 
+                <button
                   onClick={() => setIsPromptModalOpen(true)}
                   className="p-2 rounded-full hover:bg-slate-100 dark:hover:bg-white/5 transition-colors"
                 >
@@ -474,7 +485,7 @@ export default function App() {
                 </button>
               </div>
               <div className="relative group">
-                <textarea 
+                <textarea
                   value={userPrompt}
                   onChange={(e) => setUserPrompt(e.target.value)}
                   placeholder="Ví dụ: Phào chỉ màu trắng sứ, phong cách tân cổ điển..."
@@ -484,20 +495,20 @@ export default function App() {
                   )}
                 />
                 <div className="absolute bottom-4 right-4 flex gap-2 opacity-0 group-hover:opacity-100 transition-all">
-                  <button 
+                  <button
                     onClick={() => setIsLibraryPanelOpen(true)}
                     className="flex items-center gap-2 px-4 py-2.5 rounded-2xl bg-white/10 dark:bg-black/20 backdrop-blur-md hover:bg-indigo-500 hover:text-white transition-all shadow-sm text-[10px] font-black uppercase tracking-wider"
                   >
                     <ImageIcon className="w-3.5 h-3.5" />
                     Thư viện prompt
                   </button>
-                  <button 
+                  <button
                     onClick={() => setUserPrompt("")}
                     className="p-2.5 rounded-2xl bg-white/10 dark:bg-black/20 backdrop-blur-md hover:bg-red-500 hover:text-white transition-all shadow-sm"
                   >
                     <Trash2 className="w-4 h-4" />
                   </button>
-                  <button 
+                  <button
                     onClick={() => {
                       const newId = `prompt-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
                       setPromptLibrary(prev => [...prev, { id: newId, title: 'Mới', content: userPrompt, createdAt: Date.now(), updatedAt: Date.now() }]);
@@ -512,7 +523,7 @@ export default function App() {
             </div>
 
             {/* Action Button */}
-            <button 
+            <button
               onClick={generateMolding}
               disabled={isGenerating || !roomImage || moldingImages.length === 0}
               className={cn(
@@ -536,16 +547,16 @@ export default function App() {
 
           {/* Right Column: Results */}
           <div className="space-y-10">
-            
+
             {/* Main Result Area */}
             <div className={cn(
               "rounded-[40px] p-10 border min-h-[600px] flex flex-col items-center justify-center relative overflow-hidden transition-all duration-500",
               theme === 'dark' ? "bg-white/5 border-white/5" : "bg-white border-slate-100 shadow-sm"
             )}>
-              
+
               <AnimatePresence mode="wait">
                 {!isGenerating && !activeResult && (
-                  <motion.div 
+                  <motion.div
                     key="empty"
                     initial={{ opacity: 0, scale: 0.9 }}
                     animate={{ opacity: 1, scale: 1 }}
@@ -566,7 +577,7 @@ export default function App() {
                 )}
 
                 {isGenerating && (
-                  <motion.div 
+                  <motion.div
                     key="loading"
                     initial={{ opacity: 0 }}
                     animate={{ opacity: 1 }}
@@ -585,9 +596,9 @@ export default function App() {
                         <p className={cn("text-sm font-medium", theme === 'dark' ? "text-slate-400" : "text-slate-500")}>Quá trình này thường mất khoảng 15-20 giây...</p>
                       </div>
                     </div>
-                    
+
                     <div className="relative h-1.5 w-full bg-slate-100 dark:bg-white/5 rounded-full overflow-hidden">
-                      <motion.div 
+                      <motion.div
                         className={cn("absolute top-0 left-0 h-full", theme === 'dark' ? "bg-white" : "bg-black")}
                         initial={{ width: "0%" }}
                         animate={{ width: "100%" }}
@@ -598,7 +609,7 @@ export default function App() {
                 )}
 
                 {activeResult && !isGenerating && (
-                  <motion.div 
+                  <motion.div
                     key="result"
                     initial={{ opacity: 0, y: 20 }}
                     animate={{ opacity: 1, y: 0 }}
@@ -617,27 +628,27 @@ export default function App() {
                           <p className={cn("text-xs font-medium", theme === 'dark' ? "text-slate-400" : "text-slate-500")}>Đã áp dụng mẫu phào chỉ thành công</p>
                         </div>
                       </div>
-                      
+
                       <div className={cn(
                         "flex p-1 rounded-xl",
                         theme === 'dark' ? "bg-white/5" : "bg-slate-100"
                       )}>
-                        <button 
+                        <button
                           onClick={() => setCompareMode(false)}
                           className={cn(
                             "px-4 py-2 text-xs font-bold rounded-lg transition-all",
-                            !compareMode 
+                            !compareMode
                               ? (theme === 'dark' ? "bg-white text-black shadow-sm" : "bg-white text-indigo-600 shadow-sm")
                               : (theme === 'dark' ? "text-slate-400" : "text-slate-500")
                           )}
                         >
                           Kết quả
                         </button>
-                        <button 
+                        <button
                           onClick={() => setCompareMode(true)}
                           className={cn(
                             "px-4 py-2 text-xs font-bold rounded-lg transition-all flex items-center gap-2",
-                            compareMode 
+                            compareMode
                               ? (theme === 'dark' ? "bg-white text-black shadow-sm" : "bg-white text-indigo-600 shadow-sm")
                               : (theme === 'dark' ? "text-slate-400" : "text-slate-500")
                           )}
@@ -648,7 +659,7 @@ export default function App() {
                     </div>
 
                     {compareMode ? (
-                      <CompareSlider 
+                      <CompareSlider
                         activeResult={activeResult}
                         compareSlider={compareSlider}
                         setCompareSlider={setCompareSlider}
@@ -662,20 +673,20 @@ export default function App() {
                         theme === 'dark' ? "border-white/5 bg-white/5" : "border-slate-100 bg-slate-50",
                         getAspectRatioClass(activeResult.options.aspectRatio || '16:9')
                       )}>
-                        <img 
-                          src={activeResult.url} 
-                          alt="Result" 
+                        <img
+                          src={activeResult.url}
+                          alt="Result"
                           className="w-full h-full object-cover"
                           referrerPolicy="no-referrer"
                         />
                         <div className="absolute inset-0 bg-black/20 opacity-0 group-hover:opacity-100 transition-opacity duration-300 flex items-center justify-center gap-4">
-                          <button 
+                          <button
                             onClick={() => setIsLightboxOpen(true)}
                             className="p-4 bg-white rounded-full text-black hover:scale-110 transition-transform shadow-xl"
                           >
                             <Maximize2 className="w-6 h-6" />
                           </button>
-                          <button 
+                          <button
                             onClick={() => handleDownload(activeResult.url)}
                             className="p-4 bg-white rounded-full text-black hover:scale-110 transition-transform shadow-xl"
                           >
@@ -710,17 +721,17 @@ export default function App() {
                       </div>
 
                       <div className="flex items-center gap-4">
-                        <button 
+                        <button
                           onClick={() => handleDownload(activeResult.url)}
                           className={cn(
                             "px-10 py-4 rounded-full text-xs font-black uppercase tracking-widest transition-all shadow-xl flex items-center gap-3 justify-center",
                             theme === 'dark' ? "bg-white text-black hover:bg-slate-200 shadow-white/5" : "bg-black text-white hover:bg-slate-800 shadow-black/10"
                           )}
                         >
-                          <Download className="w-4 h-4" /> 
+                          <Download className="w-4 h-4" />
                           <span>Tải kết quả</span>
                         </button>
-                        <button 
+                        <button
                           onClick={() => {
                             setRoomImage(null);
                             setMoldingImages([]);
@@ -749,7 +760,7 @@ export default function App() {
                   <h3 className="text-sm font-bold uppercase tracking-widest opacity-70">Kết quả gần đây</h3>
                 </div>
                 {(results.length > 0) && (
-                  <button 
+                  <button
                     onClick={() => {
                       setResults([]);
                       setActiveResult(null);
@@ -765,7 +776,7 @@ export default function App() {
                   </button>
                 )}
               </div>
-              
+
               <div className="grid grid-cols-4 gap-8">
                 {(results.length > 0 ? results : MOCK_RECENT_RESULTS).slice(0, 4).map((res) => (
                   <motion.div
@@ -774,15 +785,15 @@ export default function App() {
                     onClick={() => setActiveResult(res)}
                     className={cn(
                       "group relative rounded-[32px] overflow-hidden cursor-pointer transition-all duration-500",
-                      activeResult?.id === res.id 
+                      activeResult?.id === res.id
                         ? (theme === 'dark' ? "ring-2 ring-white ring-offset-4 ring-offset-[#0a0a0a]" : "ring-2 ring-black ring-offset-4 ring-offset-[#fcfcfc]")
                         : "hover:scale-[1.02]"
                     )}
                   >
                     <div className={cn("w-full transition-colors aspect-video", theme === 'dark' ? "bg-white/5" : "bg-slate-100")}>
-                      <img 
-                        src={res.url} 
-                        alt="Recent result" 
+                      <img
+                        src={res.url}
+                        alt="Recent result"
                         className="w-full h-full object-cover"
                         referrerPolicy="no-referrer"
                       />
@@ -799,7 +810,7 @@ export default function App() {
       </main>
 
       {/* Lightbox / Zoom Modal */}
-      <Lightbox 
+      <Lightbox
         isOpen={isLightboxOpen}
         onClose={() => setIsLightboxOpen(false)}
         activeResult={activeResult}
@@ -809,7 +820,7 @@ export default function App() {
       />
 
       {/* Prompt Expansion Modal */}
-      <PromptExpansionModal 
+      <PromptExpansionModal
         isOpen={isPromptModalOpen}
         onClose={() => setIsPromptModalOpen(false)}
         userPrompt={userPrompt}
@@ -817,12 +828,12 @@ export default function App() {
       />
 
       {/* Guide Modal */}
-      <GuideModal 
+      <GuideModal
         isOpen={isGuideModalOpen}
         onClose={() => setIsGuideModalOpen(false)}
       />
 
-      <PromptLibraryPanel 
+      <PromptLibraryPanel
         isOpen={isLibraryPanelOpen}
         onClose={() => setIsLibraryPanelOpen(false)}
         promptLibrary={promptLibrary}
@@ -836,12 +847,13 @@ export default function App() {
       />
 
       {/* Toast Notification */}
-      <Toast 
-        message={toast?.message || null} 
-        onClose={() => setToast(null)} 
+      <Toast
+        message={toast?.message || null}
+        onClose={() => setToast(null)}
       />
 
-      <style dangerouslySetInnerHTML={{ __html: `
+      <style dangerouslySetInnerHTML={{
+        __html: `
         @keyframes shimmer {
           0% { transform: translateX(-100%); }
           100% { transform: translateX(100%); }
