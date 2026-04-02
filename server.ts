@@ -84,11 +84,13 @@ app.post("/api/generate", async (req, res) => {
 
     const payload = {
       model: "flux-2/pro-image-to-image",
-      input_urls: input_urls,
-      prompt: sanitizedPrompt,
-      aspect_ratio: aspectRatio || "16:9",
-      resolution: resolution || "1K",
-      nsfw_checker: true
+      input: {
+        input_urls: input_urls,
+        prompt: sanitizedPrompt,
+        aspect_ratio: aspectRatio || "16:9",
+        resolution: resolution || "1K",
+        nsfw_checker: true
+      }
     };
 
     console.log("KIE API Request URL:", `${KIE_API_URL}/createTask`);
