@@ -422,29 +422,28 @@ export default function App() {
                     <label className="text-[10px] font-black opacity-40 uppercase tracking-widest ml-1 flex items-center gap-2">
                       <Maximize className="w-3 h-3" /> Độ phân giải
                     </label>
-                    <select
+                      <select
                       value={resolution}
                       onChange={(e) => setResolution(e.target.value as any)}
                       className={cn(
                         "w-full px-4 py-3 rounded-2xl text-xs font-bold border focus:outline-none transition-all",
-                        theme === 'dark' ? "bg-white/5 border-white/10 text-white" : "bg-slate-50 border-slate-100 text-slate-900"
+                        theme === 'dark' ? "bg-[#111] border-white/10 text-white" : "bg-slate-50 border-slate-100 text-slate-900"
                       )}
                     >
                       <option value="1K">1K</option>
                       <option value="2K">2K</option>
-                      <option value="4K">4K</option>
                     </select>
                   </div>
                   <div className="space-y-4">
                     <label className="text-[10px] font-black opacity-40 uppercase tracking-widest ml-1 flex items-center gap-2">
                       <Eye className="w-3 h-3" /> Tỉ lệ
                     </label>
-                    <select
+                      <select
                       value={outputAspectRatio}
                       onChange={(e) => setOutputAspectRatio(e.target.value)}
                       className={cn(
                         "w-full px-4 py-3 rounded-2xl text-xs font-bold border focus:outline-none transition-all",
-                        theme === 'dark' ? "bg-white/5 border-white/10 text-white" : "bg-slate-50 border-slate-100 text-slate-900"
+                        theme === 'dark' ? "bg-[#111] border-white/10 text-white" : "bg-slate-50 border-slate-100 text-slate-900"
                       )}
                     >
                       {['1:1', '16:9', '4:3', '9:16', '3:4', '21:9', '9:21'].map(ratio => (
@@ -844,6 +843,7 @@ export default function App() {
           showToast("Đã áp dụng prompt");
         }}
         showToast={showToast}
+        theme={theme}
       />
 
       {/* Toast Notification */}
