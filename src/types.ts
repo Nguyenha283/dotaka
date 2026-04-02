@@ -5,9 +5,9 @@ export interface GenerationResult {
   originalUrl: string;
   moldingUrls: string[];
   options: {
-    style: string;
-    intensity: string;
-    angle: string;
+    model: string;
+    resolution: string;
+    nsfwChecker: boolean;
     aspectRatio: string;
   };
 }

@@ -142,11 +142,11 @@ export default function App() {
     showToast("Đã tải ảnh xuống");
   };
   
-  // Design Options
-  const [style, setStyle] = useState('Tự nhiên');
-  const [intensity, setIntensity] = useState('Vừa');
-  const [angle, setAngle] = useState('Toàn cảnh');
+  // KIE.AI API Parameters
+  const [kieModel, setKieModel] = useState<'flux-2/pro-image-to-image' | 'flux-2/flex-image-to-image'>('flux-2/pro-image-to-image');
   const [outputAspectRatio, setOutputAspectRatio] = useState('16:9');
+  const [resolution, setResolution] = useState<'1K' | '2K' | '4K'>('1K');
+  const [nsfwChecker, setNsfwChecker] = useState(false);
 
   // --- Handlers ---
   const generateMolding = async () => {
@@ -170,12 +170,11 @@ export default function App() {
         body: JSON.stringify({
           roomImage,
           moldingImages,
-          prompt: `Interior renovation: add ceiling molding from reference images to the room. 
-                   Style: ${style}. Intensity: ${intensity}. Perspective: ${angle}. 
-                   ${userPrompt ? `Extra: ${userPrompt}.` : ''}
-                   Realistic, high quality, seamless integration.`,
+          prompt: userPrompt || "Add ceiling molding from the reference images to the room. Realistic, high quality, seamless integration.",
+          model: kieModel,
           aspectRatio: outputAspectRatio,
-          resolution: "1K"
+          resolution,
+          nsfwChecker,
         })
       });
 
@@ -229,7 +228,7 @@ export default function App() {
         originalUrl: roomImage,
         moldingUrls: moldingImages,
         timestamp: Date.now(),
-        options: { style, intensity, angle, aspectRatio: outputAspectRatio }
+        options: { model: kieModel, resolution, nsfwChecker, aspectRatio: outputAspectRatio }
       };
       setResults(prev => [newResult, ...prev]);
       setActiveResult(newResult);
@@ -378,50 +377,30 @@ export default function App() {
             )}>
               <div className="flex items-center gap-4 mb-8">
                 <StepIndicator step="Step 03" theme={theme} />
-                <h3 className="text-sm font-bold uppercase tracking-widest opacity-70">Tùy chọn tạo ảnh</h3>
+                <h3 className="text-sm font-bold uppercase tracking-widest opacity-70">Tùy chọn tạo ảnh (KIE API)</h3>
               </div>
 
               <div className="space-y-8">
                 <div className="space-y-4">
                   <label className="text-[10px] font-black opacity-40 uppercase tracking-widest ml-1 flex items-center gap-2">
-                    <Palette className="w-3 h-3" /> Phong cách hiển thị
+                    <Sparkles className="w-3 h-3" /> Model
                   </label>
                   <div className="grid grid-cols-2 gap-2">
-                    {['Tự nhiên', 'Sang trọng', 'Tối giản', 'Cổ điển'].map((s) => (
+                    {[
+                      { label: 'Pro', value: 'flux-2/pro-image-to-image' },
+                      { label: 'Flex', value: 'flux-2/flex-image-to-image' }
+                    ].map((m) => (
                       <button
-                        key={s}
-                        onClick={() => setStyle(s)}
+                        key={m.value}
+                        onClick={() => setKieModel(m.value as any)}
                         className={cn(
                           "px-4 py-3 rounded-2xl text-xs font-bold transition-all border",
-                          style === s 
+                          kieModel === m.value 
                             ? (theme === 'dark' ? "bg-white text-black border-white" : "bg-black text-white border-black")
                             : (theme === 'dark' ? "bg-transparent border-white/10 hover:border-white/30" : "bg-transparent border-slate-100 hover:border-slate-300")
                         )}
                       >
-                        {s}
-                      </button>
-                    ))}
-                  </div>
-                </div>
-
-                <div className="space-y-4">
-                  <div className="flex justify-between text-[10px] font-black opacity-40 uppercase tracking-widest ml-1">
-                    <span className="flex items-center gap-2"><Sparkles className="w-3 h-3" /> Mức độ hiển thị</span>
-                    <span>{intensity}</span>
-                  </div>
-                  <div className="grid grid-cols-3 gap-2">
-                    {['Nhẹ', 'Vừa', 'Mạnh'].map((i) => (
-                      <button
-                        key={i}
-                        onClick={() => setIntensity(i)}
-                        className={cn(
-                          "px-3 py-2.5 rounded-xl text-[10px] font-bold transition-all border",
-                          intensity === i 
-                            ? (theme === 'dark' ? "bg-white text-black border-white" : "bg-black text-white border-black")
-                            : (theme === 'dark' ? "bg-transparent border-white/10 hover:border-white/30" : "bg-transparent border-slate-100 hover:border-slate-300")
-                        )}
-                      >
-                        {i}
+                        {m.label}
                       </button>
                     ))}
                   </div>
@@ -430,24 +409,24 @@ export default function App() {
                 <div className="grid grid-cols-2 gap-4">
                   <div className="space-y-4">
                     <label className="text-[10px] font-black opacity-40 uppercase tracking-widest ml-1 flex items-center gap-2">
-                      <Eye className="w-3 h-3" /> Góc nhìn
+                      <Maximize className="w-3 h-3" /> Độ phân giải
                     </label>
                     <select 
-                      value={angle}
-                      onChange={(e) => setAngle(e.target.value)}
+                      value={resolution}
+                      onChange={(e) => setResolution(e.target.value as any)}
                       className={cn(
                         "w-full px-4 py-3 rounded-2xl text-xs font-bold border focus:outline-none transition-all",
                         theme === 'dark' ? "bg-white/5 border-white/10 text-white" : "bg-slate-50 border-slate-100 text-slate-900"
                       )}
                     >
-                      <option value="Toàn cảnh">Toàn cảnh</option>
-                      <option value="Cận cảnh">Cận cảnh</option>
-                      <option value="Góc thấp">Góc thấp</option>
+                      <option value="1K">1K</option>
+                      <option value="2K">2K</option>
+                      <option value="4K">4K</option>
                     </select>
                   </div>
                   <div className="space-y-4">
                     <label className="text-[10px] font-black opacity-40 uppercase tracking-widest ml-1 flex items-center gap-2">
-                      <Maximize className="w-3 h-3" /> Tỉ lệ
+                      <Eye className="w-3 h-3" /> Tỉ lệ
                     </label>
                     <select 
                       value={outputAspectRatio}
@@ -457,11 +436,25 @@ export default function App() {
                         theme === 'dark' ? "bg-white/5 border-white/10 text-white" : "bg-slate-50 border-slate-100 text-slate-900"
                       )}
                     >
-                      <option value="16:9">16:9</option>
-                      <option value="4:3">4:3</option>
-                      <option value="1:1">1:1</option>
+                      {['1:1', '16:9', '4:3', '9:16', '3:4', '21:9', '9:21'].map(ratio => (
+                        <option key={ratio} value={ratio}>{ratio}</option>
+                      ))}
                     </select>
                   </div>
+                </div>
+
+                <div className="space-y-4">
+                  <label className="flex items-center gap-3 cursor-pointer">
+                    <input 
+                      type="checkbox" 
+                      checked={nsfwChecker}
+                      onChange={(e) => setNsfwChecker(e.target.checked)}
+                      className="w-5 h-5 rounded border-gray-300 text-black focus:ring-black"
+                    />
+                    <span className="text-xs font-bold opacity-70 uppercase tracking-widest mt-1">
+                      Bật kiểm duyệt nội dung (NSFW Checker)
+                    </span>
+                  </label>
                 </div>
               </div>
             </div>
