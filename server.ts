@@ -19,7 +19,7 @@ async function uploadToKie(base64Data: string, apiKey: string): Promise<string> 
     // KIE.AI accepts the full data URL (with or without prefix)
     const response = await axios.post(
       "https://kieai.redpandaai.co/api/file-base64-upload",
-      { base64Data, fileName: `image_${Date.now()}.png` },
+      { base64Data, uploadPath: "images/base64", fileName: `image_${Date.now()}.png` },
       {
         headers: {
           "Authorization": `Bearer ${apiKey}`,
