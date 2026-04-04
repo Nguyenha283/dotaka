@@ -1,0 +1,13 @@
+services:
+  - type: web
+    name: ai-molding-visualizer
+    env: node
+    buildCommand: npm install && npm run build
+    startCommand: npm start
+    envVars:
+      - key: NODE_VERSION
+        value: 18.18.0
+      - key: NODE_ENV
+        value: production
+      - key: KIE_API_KEY
+        sync: false
