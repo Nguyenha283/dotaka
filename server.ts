@@ -68,7 +68,7 @@ async function uploadImageToKie(base64Data: string): Promise<string> {
 // ─────────────────────────────────────────────
 app.post("/api/generate", async (req, res) => {
   try {
-    const { roomImage, moldingImages, prompt, aspectRatio, resolution } = req.body;
+    const { roomImage, moldingImages, prompt, aspectRatio, resolution, model } = req.body;
 
     if (!roomImage) throw new Error("Missing room image");
     if (!moldingImages || !Array.isArray(moldingImages) || moldingImages.length === 0) {
@@ -97,13 +97,14 @@ app.post("/api/generate", async (req, res) => {
     // Model: flux-2/flex-image-to-image
     // Docs: https://docs.kie.ai/market/flux2/flex-image-to-image
     const payload = {
-      model: "flux-2/flex-image-to-image",
+      model: model || "flux-2/flex-image-to-image",
       input: {
         input_urls,
         prompt: sanitizedPrompt,
         aspect_ratio: aspectRatio || "16:9",
         resolution: resolution || "1K",
         nsfw_checker: false,
+        strength: 0.85,
       },
     };
 
